@@ -1,5 +1,4 @@
-// this file defines the http module because it can't be inferred from a file name
-// as it is a directory
+// this file defines the http module because it can't be inferred from a file name as it is a directory
 
 pub use method::Method;
 pub use query_string::{QueryString, Value as QueryStringValue};

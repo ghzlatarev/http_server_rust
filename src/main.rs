@@ -32,6 +32,11 @@ BODY
 // 6. lifetimes
 
 // TODO:: 
-// 1. Extend the request and response. Right now it completely ignores the headrs
-// 2. Optimize the server to utilize mutliple threds
-//    std::sync and std::thread 
+// 1. Extend the request and response. Right now it completely ignores the headers                          
+// 2. Optimize the server to utilize mutliple threads                                                       -> Done
+// 3. Add more documentation to ThreadPool and its public methods.                                          
+// 4. Add tests of the library’s functionality.                                                             
+// 5. Change calls to unwrap to more robust error handling.                                                 
+// 6. Use ThreadPool to perform some task other than serving web requests.                                  
+// 7. Find a thread pool crate on crates.io and implement a similar web server using the                    
+//    crate instead. Then compare its API and robustness to the thread pool we implemented.            

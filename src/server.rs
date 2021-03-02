@@ -1,6 +1,5 @@
-// We don't need the mod here 
-// because rust will automatically create it
-// because the name of the file is "server"
+// We don't need the mod here because rust will automatically create it.
+// It is inferred from the name of the file - "server".
 
 use crate::http::{ParseError, Request, Response, StatusCode};
 use std::convert::TryFrom;
@@ -17,7 +16,7 @@ pub trait Handler {
     fn handle_request(&mut self, request: &Request) -> Response;
 
     fn handle_bad_request(&mut self, e: &ParseError) -> Response {
-        // We can provide default implementation that the implementors are not forced to override.
+        // We can provide default implementation so the implementors are not forced to override.
         println!("Failed to parse request: {}", e);
         Response::new(StatusCode::BadRequest, None)
     }
@@ -34,20 +33,20 @@ impl Server {
         }
     }
 
-    // The run() function will take ownership of the instance
-    // and hence the struct will be deallocated when the function exits.
+    // The run() function will take ownership of the instance.
+    // Hence the struct will be deallocated when the function exits.
     pub fn run(self, public_path: String) {
         println!("Listening on {}", self.addr);
 
         let listener:TcpListener = TcpListener::bind(&self.addr).unwrap();
 
-        let thread_count = 2;
+        let thread_count = 4;
         let pool = ThreadPool::new(thread_count);
 
         let public_path = Arc::new(public_path);
+
         // Writing "loop" is the same as "while true"
         loop {
-            println!("Looping the loop \n");
             match listener.accept() {
                 // We can substitute any and all of the names of variables in the tuple with an underscore in order to ignore them
                 Ok((stream, _)) => {
@@ -58,21 +57,8 @@ impl Server {
                         match stream.read(&mut buffer) {
                             Ok(_) => {
 
-                                //println!("Received a request: {}", String::from_utf8_lossy(&buffer));
-                                
-                                let test =  String::from_utf8_lossy(&buffer);
-                                if test.contains("sleep") {
-                                    // This seems to be causing the errors on response.send() below
-                                    thread::sleep(Duration::from_secs(20));
-                                    println!("The sleep thread slept for 20 seconds. The other thread should have finished by now! \n");
-                                }else{
-                                    //thread::sleep(Duration::from_secs(10));
-                                    println!("The woke thread didn't sleep and should have finished by now! \n");
-                                }
-
+                                println!("Received a request: {}", String::from_utf8_lossy(&buffer));
                                 let response = match Request::try_from(&buffer[..]) {
-                                    // Ok(request) =>  handler.handle_request(&request),
-                                    // Err(e) =>  handler.handle_bad_request(&e),
                                     Ok(request) =>  {
                                         println!("The request matched Ok \n");
                                         handler.handle_request(&request)
@@ -86,8 +72,6 @@ impl Server {
                                 if let Err(e) = response.send(&mut stream) {
                                     println!("Failed to send response: {}", e);
                                 }
-                                // Below line does the same
-                                //let res: &Result<Request, _> = &buffer[..].try_into();
                             
                             }
                             Err(e) => println!("Failed to read from connection: {}", e),
@@ -100,13 +84,6 @@ impl Server {
             
                 Err(e) => println!("Failed to establish a connection: {}", e),
             }
-
-            // The below code does the same as the match statement above
-            //let res = listener.accept();
-            //if res.is_err() {
-            //    continue;
-            //}
-            //let (straem, addr) = res.unwrap();
         }
     }
 }  

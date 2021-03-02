@@ -1,6 +1,5 @@
  use std::str::FromStr;
 
- // 9 types
 #[derive(Debug)]
 pub enum Method {
     GET,

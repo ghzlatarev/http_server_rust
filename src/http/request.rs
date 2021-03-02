@@ -34,25 +34,12 @@ impl<'buf_lifetime> TryFrom<&'buf_lifetime [u8]> for Request<'buf_lifetime> {
     // The compiler will go ahead and implement TryInto on &[u8] automatically
     // This is basically adding functionality to a library that I didn't write
     // When we call try_from we are going to pass some reference to some memory
-    // and what will be returned has the same lifetime as the reference passed as a paramter
+    // and what will be returned has the same lifetime as the reference passed as a parameter
     // The compiler now knows that whatever the funciton returns has a relationship with the passed buffer
     fn try_from(buf: &'buf_lifetime [u8]) -> Result<Request<'buf_lifetime>, Self::Error> {
-        // match str::from_utf8(buf) {
-        //     Ok(request) => {}
-        //     Err(_) => return Err(ParseError::InvalidEncoding),
-        // }
 
-        // match str::from_utf8(buf).or(Err(ParseError::InvalidEncoding)) {
-        //     Ok(request) => {},
-        //     Err(e) => return Err(e),
-        // }
-        
+        // The ? at the end is like matching but if there's an error we will just exit the function with it.
         let request = str::from_utf8(buf)?;
-        
-        // match get_next_word(request) {
-        //     Some((method, request)) => {},
-        //     None => return Err(ParseError::InvalidRequest),
-        // }
         
         // GET /search?name=abs&sort=1 HTTP/1.1\r\n...HEADERS...
         let (method, request) = get_next_word(request).ok_or(ParseError::InvalidRequest)?;
@@ -64,22 +51,6 @@ impl<'buf_lifetime> TryFrom<&'buf_lifetime [u8]> for Request<'buf_lifetime> {
         }
 
         let method: Method = method.parse()?;
-
-        // let mut query_string = None;
-        // match path.find('?') {
-        //     Some(i) => {
-        //         query_string = Some(&path[i + 1..]);
-        //         path = &path[..i];
-        //     }
-        //     None => {}
-        // }
-
-        // let q = path.find('?');
-        // if q.is_some() {
-        //     let i = q.unwrap();
-        //     query_string = Some(&path[i + 1..]);
-        //     path = &path[..i];
-        // }
         
         let mut query_string = None;
         // The if let feature lets us only match on the variants we care about

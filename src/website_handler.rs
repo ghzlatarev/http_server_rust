@@ -1,7 +1,7 @@
 use super::http::{Request, Response, StatusCode, Method};
 use super::server::Handler;
 use std::fs;
-use std::path::{Path};
+use std::path::Path;
 use std::sync::Arc;
 
 // Windows specific

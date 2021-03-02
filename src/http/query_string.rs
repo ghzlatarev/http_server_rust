@@ -1,7 +1,5 @@
 use std::collections::HashMap;
 
-// a=1&b=2&c&d=&e===&d=7&d=abc
-
 #[derive(Debug)]
 pub struct QueryString<'buf_lifetime> {
     data: HashMap<&'buf_lifetime str, Value<'buf_lifetime>>,
