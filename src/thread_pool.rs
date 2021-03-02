@@ -5,9 +5,15 @@ use std::sync::Mutex;
 
 type Job = Box<dyn FnOnce() + Send + 'static>;
 
+// As our threads are looping forever waiting for jobs we can use the second variant to signal them to terminate.
+enum Message {
+    NewJob(Job),
+    Terminate,
+}
+
 pub struct ThreadPool {
     workers: Vec<Worker>,
-    sender: mpsc::Sender<Job>,
+    sender: mpsc::Sender<Message>,
 }
 
 impl ThreadPool {
@@ -35,27 +41,62 @@ impl ThreadPool {
     pub fn execute<F>(&self, f:F) 
         where F: FnOnce() + Send + 'static, {
             let job = Box::new(f);
-            self.sender.send(job).unwrap();
+            self.sender.send(Message::NewJob(job)).unwrap();
+    }
+}
+
+impl Drop for ThreadPool {
+    fn drop(&mut self) {
+        println!("Sending terminate message to all workers.");
+
+        // We don't want to join each thread in this iteration as well for a reason!
+        // If the current iteration's thread is busy for a terminate message, the next one will pick it up.
+        // And if we try to immediately call join() its loop would not have broken... Deadlock!
+        for _ in &self.workers {
+            self.sender.send(Message::Terminate).unwrap();
+        }
+
+        println!("Shutting down all workers.");
+
+        for worker in &mut self.workers {
+            println!("Shutting down worker {}", worker.id);
+            
+            // We only have a mutable borrow of each worker and join() takes ownership of its argument.
+            // But with take() we can move it out of the Option and leave a None in its place
+            if let Some(thread) = worker.thread.take() {
+                thread.join().unwrap();
+            }
+        }
     }
 }
 
 struct Worker {
     id: usize,
-    thread: thread::JoinHandle<()>,
+    thread: Option<thread::JoinHandle<()>>,
 }
 
 impl Worker {
-    fn new (id: usize, receiver: Arc<Mutex<mpsc::Receiver<Job>>>)-> Worker {
+    fn new (id: usize, receiver: Arc<Mutex<mpsc::Receiver<Message>>>)-> Worker {
         let thread = thread::spawn(move || loop {
-            let job = receiver.lock().unwrap().recv().unwrap();
+            let message = receiver.lock().unwrap().recv().unwrap();
 
-            println!("Worker {} got a job; executing.", id);
+            match message {
+                Message::NewJob(job) => {
+                    println!("Worker {} got a job; executing.", id);
 
-            job();
+                    job();
+                }
+                Message::Terminate => {
+                    println!("Worker {} was told to terminate.", id);
 
-            println!("Worker {} finished executing.", id);
+                    break;
+                }
+            }
         });
         
-        Worker{id, thread}
+        Worker {
+            id,
+            thread: Some(thread),
+        }
     }
 }
