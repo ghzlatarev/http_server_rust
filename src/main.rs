@@ -2,12 +2,14 @@
 
 use server::Server;
 use std::env;
+use thread_pool::ThreadPool;
 use website_handler::WebsiteHandler;
 
 // This is like copy pasting the contents of the server module into this file
 mod server;
 mod http;
 mod website_handler;
+mod thread_pool;
 
 fn main() {
     let default_path = format!("{}\\public", env!("CARGO_MANIFEST_DIR"));

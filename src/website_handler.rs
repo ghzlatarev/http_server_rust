@@ -1,6 +1,19 @@
 use super::http::{Request, Response, StatusCode, Method};
 use super::server::Handler;
 use std::fs;
+use std::path::{Path};
+
+
+// Windows specific
+fn adjust_canonicalization<P: AsRef<Path>>(p: P) -> String {
+    const VERBATIM_PREFIX: &str = r#"\\?\"#;
+    let p = p.as_ref().display().to_string();
+    if p.starts_with(VERBATIM_PREFIX) {
+        p[VERBATIM_PREFIX.len()..].to_string()
+    } else {
+        p
+    }
+}
 
 pub struct WebsiteHandler {
     public_path: String
@@ -13,9 +26,9 @@ impl WebsiteHandler {
 
     fn read_file(&self, file_path: &str) -> Option<String> {
         let path = format!("{}/{}", self.public_path, file_path);
-
         match fs::canonicalize(path) {
             Ok(path) => {
+                let path = adjust_canonicalization(path);
                 if path.starts_with(&self.public_path) {
                     fs::read_to_string(path).ok()
                 } else {
