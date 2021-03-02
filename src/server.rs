@@ -9,8 +9,6 @@ use super::thread_pool::ThreadPool;
 use super::website_handler::RequestHandler;
 use closure::closure;
 use std::sync::Arc;
-use std::time::Duration;
-use std::thread;
 
 pub trait Handler {
     fn handle_request(&mut self, request: &Request) -> Response;
@@ -60,11 +58,9 @@ impl Server {
                                 println!("Received a request: {}", String::from_utf8_lossy(&buffer));
                                 let response = match Request::try_from(&buffer[..]) {
                                     Ok(request) =>  {
-                                        println!("The request matched Ok \n");
                                         handler.handle_request(&request)
                                     },
                                     Err(e) => {
-                                        println!("The request matched to Err \n");
                                         handler.handle_bad_request(&e)
                                     },
                                 };
