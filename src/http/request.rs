@@ -7,14 +7,14 @@ use std::str;
 use super::{QueryString};
 
 #[derive(Debug)]
-pub struct Request<'buf_lifetime> {
-    path: &'buf_lifetime str,
-    query_string: Option<QueryString<'buf_lifetime>>,
+pub struct Request<'buf> {
+    path: &'buf str,
+    query_string: Option<QueryString<'buf>>,
     // super means go 1 level up
     method: Method,
 }
 
-impl<'buf_lifetime> Request<'buf_lifetime> {
+impl<'buf> Request<'buf> {
     pub fn path(&self) -> &str {
         &self.path
     }
@@ -28,7 +28,7 @@ impl<'buf_lifetime> Request<'buf_lifetime> {
     }
 }
 
-impl<'buf_lifetime> TryFrom<&'buf_lifetime [u8]> for Request<'buf_lifetime> {
+impl<'buf> TryFrom<&'buf [u8]> for Request<'buf> {
     type Error = ParseError;
 
     // The compiler will go ahead and implement TryInto on &[u8] automatically
@@ -36,7 +36,7 @@ impl<'buf_lifetime> TryFrom<&'buf_lifetime [u8]> for Request<'buf_lifetime> {
     // When we call try_from we are going to pass some reference to some memory
     // and what will be returned has the same lifetime as the reference passed as a parameter
     // The compiler now knows that whatever the funciton returns has a relationship with the passed buffer
-    fn try_from(buf: &'buf_lifetime [u8]) -> Result<Request<'buf_lifetime>, Self::Error> {
+    fn try_from(buf: &'buf [u8]) -> Result<Request<'buf>, Self::Error> {
 
         // The ? at the end is like matching but if there's an error we will just exit the function with it.
         let request = str::from_utf8(buf)?;
@@ -68,15 +68,6 @@ impl<'buf_lifetime> TryFrom<&'buf_lifetime [u8]> for Request<'buf_lifetime> {
 }
 
 fn get_next_word(request: &str) -> Option<(&str, &str)> {
-    // let mut iter = request.chars();
-    // loop {
-    //     let item = iter.next();
-    //     match item {
-    //         Some(c) => {}
-    //         None => break,
-    //     }
-    // }
-
     // Loop through all the elements in the iterator
     for (index, character) in request.chars().enumerate() {
         if character == ' '  || character == '\r' {
@@ -87,6 +78,7 @@ fn get_next_word(request: &str) -> Option<(&str, &str)> {
     None
 }
 
+#[derive(Eq, PartialEq)]
 pub enum ParseError {
     InvalidRequest,
     InvalidEncoding, // anything different than utf8
@@ -132,4 +124,72 @@ impl Debug for ParseError {
 
 impl Error for ParseError {
 
+}
+
+#[cfg(test)]
+mod request_tests {
+    use super::*;
+
+    #[test]
+    fn try_from_valid() {
+        let buffer:&[u8] = b"GET /search?name=abs&sort=1 HTTP/1.1\r\n";
+        
+        match Request::try_from(buffer) {
+            Ok(
+                Request {
+                    path,
+                    query_string,
+                    method,
+                }
+            ) => {
+                assert_eq!(path, "/search");
+                assert_eq!(method, Method::GET);
+            },
+            Err(_) => {
+                assert!(false);
+            }
+        }
+    }
+
+    #[test]
+    fn try_from_protocol_error() {
+        let buffer:&[u8] = b"GET /search?name=abs&sort=1 HTTASDP/1.1\r\n";
+        
+        match Request::try_from(buffer) {
+            Ok(_) => {
+                assert!(false);
+            },
+            Err(e) => {
+                assert_eq!(e, ParseError::InvalidProtocol);
+            }
+        }
+    }
+
+    #[test]
+    fn try_from_invalid_method_error() {
+        let buffer:&[u8] = b"GE00asT /search?name=abs&sort=1 HTTP/1.1\r\n";
+        
+        match Request::try_from(buffer) {
+            Ok(_) => {
+                assert!(false);
+            },
+            Err(e) => {
+                assert_eq!(e, ParseError::InvalidMethod);
+            }
+        }
+    }
+
+    #[test]
+    fn try_from_invalid_request_error() {
+        let buffer:&[u8] = b"GET HTTP/1.1\r\n";
+        
+        match Request::try_from(buffer) {
+            Ok(_) => {
+                assert!(false);
+            },
+            Err(e) => {
+                assert_eq!(e, ParseError::InvalidRequest);
+            }
+        }
+    }
 }

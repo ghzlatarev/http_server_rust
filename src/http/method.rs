@@ -1,6 +1,6 @@
  use std::str::FromStr;
 
-#[derive(Debug)]
+#[derive(Debug, Eq, PartialEq)]
 pub enum Method {
     GET,
     DELETE,
