@@ -23,11 +23,11 @@ impl Worker {
             println!("Worker {} got a job; executing. \n", id);
             if id % 2 == 0 {
                 // This seems to be causing the errors on response.send() below
-                //thread::sleep(Duration::from_secs(5));
-                //println!("Worker {} waited 5 seconds. \n", id);
+                //thread::sleep(Duration::from_secs(20));
+                //println!("Worker {} waited 20 seconds. The other thread should have finished by now! \n", id);
             }else{
                 //thread::sleep(Duration::from_secs(10));
-                //println!("Worker {} waited 10 seconds. \n", id);
+                //println!("Worker {} did not wait at all. It should've finished first. \n", id);
             }
             job();
             println!("Worker {} finished executing. \n", id);

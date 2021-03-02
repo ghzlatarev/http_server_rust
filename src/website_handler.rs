@@ -2,7 +2,7 @@ use super::http::{Request, Response, StatusCode, Method};
 use super::server::Handler;
 use std::fs;
 use std::path::{Path};
-
+use std::sync::Arc;
 
 // Windows specific
 fn adjust_canonicalization<P: AsRef<Path>>(p: P) -> String {
@@ -15,12 +15,12 @@ fn adjust_canonicalization<P: AsRef<Path>>(p: P) -> String {
     }
 }
 
-pub struct WebsiteHandler {
-    public_path: String
+pub struct RequestHandler {
+    public_path: Arc<String>
 }
 
-impl WebsiteHandler {
-    pub fn new(public_path: String) -> Self {
+impl RequestHandler {
+    pub fn new(public_path: Arc<String>) -> Self {
         Self { public_path }
     }
 
@@ -29,7 +29,7 @@ impl WebsiteHandler {
         match fs::canonicalize(path) {
             Ok(path) => {
                 let path = adjust_canonicalization(path);
-                if path.starts_with(&self.public_path) {
+                if path.starts_with(self.public_path.as_ref()) {
                     fs::read_to_string(path).ok()
                 } else {
                     println!("Directory Traversal Attack Attempted: {}", file_path);
@@ -42,7 +42,7 @@ impl WebsiteHandler {
     }
 }
 
-impl Handler for WebsiteHandler {
+impl Handler for RequestHandler {
     fn handle_request(&mut self, request: &Request) -> Response {
 
         match request.method() {

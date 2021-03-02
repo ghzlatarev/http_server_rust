@@ -4,12 +4,14 @@
 
 use crate::http::{ParseError, Request, Response, StatusCode};
 use std::convert::TryFrom;
-use std::convert::TryInto;
-use std::io::{Read, Write};
+use std::io::Read;
 use std::net::TcpListener;
 use super::thread_pool::ThreadPool;
-use super::website_handler::WebsiteHandler;
-use std::env;
+use super::website_handler::RequestHandler;
+use closure::closure;
+use std::sync::Arc;
+use std::time::Duration;
+use std::thread;
 
 pub trait Handler {
     fn handle_request(&mut self, request: &Request) -> Response;
@@ -34,31 +36,40 @@ impl Server {
 
     // The run() function will take ownership of the instance
     // and hence the struct will be deallocated when the function exits.
-    pub fn run(self, mut handler: impl Handler) {
+    pub fn run(self, public_path: String) {
         println!("Listening on {}", self.addr);
 
         let listener:TcpListener = TcpListener::bind(&self.addr).unwrap();
-        let pool = ThreadPool::new(4);
+
+        let thread_count = 2;
+        let pool = ThreadPool::new(thread_count);
+
+        let public_path = Arc::new(public_path);
         // Writing "loop" is the same as "while true"
         loop {
             println!("Looping the loop \n");
             match listener.accept() {
                 // We can substitute any and all of the names of variables in the tuple with an underscore in order to ignore them
-                Ok((mut stream, _)) => {
-                    pool.execute(move || {
-                        // let default_path = format!("{}\\public", env!("CARGO_MANIFEST_DIR"));
-                        // let public_path = env::var("PUBLIC_PATH").unwrap_or(default_path);
-                        let public_path = format!("{}\\public", env!("CARGO_MANIFEST_DIR"));
-                        println!("public_path: {}", public_path);
-                        
-                        let mut handler = WebsiteHandler::new(public_path);
+                Ok((stream, _)) => {
+                    let closure = closure!(move mut stream, clone public_path, || {
+                        let mut handler = RequestHandler::new(public_path);
 
                         let mut buffer:[u8; 1024] = [0; 1024];
                         match stream.read(&mut buffer) {
                             Ok(_) => {
-                                
+
                                 //println!("Received a request: {}", String::from_utf8_lossy(&buffer));
-                            
+                                
+                                let test =  String::from_utf8_lossy(&buffer);
+                                if test.contains("sleep") {
+                                    // This seems to be causing the errors on response.send() below
+                                    thread::sleep(Duration::from_secs(20));
+                                    println!("The sleep thread slept for 20 seconds. The other thread should have finished by now! \n");
+                                }else{
+                                    //thread::sleep(Duration::from_secs(10));
+                                    println!("The woke thread didn't sleep and should have finished by now! \n");
+                                }
+
                                 let response = match Request::try_from(&buffer[..]) {
                                     // Ok(request) =>  handler.handle_request(&request),
                                     // Err(e) =>  handler.handle_bad_request(&e),
@@ -71,19 +82,22 @@ impl Server {
                                         handler.handle_bad_request(&e)
                                     },
                                 };
-    
+                            
                                 if let Err(e) = response.send(&mut stream) {
                                     println!("Failed to send response: {}", e);
                                 }
                                 // Below line does the same
                                 //let res: &Result<Request, _> = &buffer[..].try_into();
                             
+                            }
+                            Err(e) => println!("Failed to read from connection: {}", e),
                         }
-                        Err(e) => println!("Failed to read from connection: {}", e),
-                    }
                     });
+                
+                    pool.execute(closure);
                     
                 },
+            
                 Err(e) => println!("Failed to establish a connection: {}", e),
             }
 

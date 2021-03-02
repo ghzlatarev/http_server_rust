@@ -4,7 +4,7 @@ use std::convert::TryFrom;
 use std::error::Error;
 use std::fmt::{Debug, Display, Formatter, Result as FmtResult};
 use std::str;
-use super::{QueryString, QueryStringValue};
+use super::{QueryString};
 
 #[derive(Debug)]
 pub struct Request<'buf_lifetime> {
