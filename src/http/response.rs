@@ -13,6 +13,9 @@ impl Response {
         Response {status_code, body}
     }
 
+    // impl Write implies Static Dispatch, meaning the compiler will check all instances of calls to this function,
+    // infer a concrete type for each one and write out a concrete implementation for that type.
+    // This way we don't need to use a run-time vtable to lookup which function address we need. 
     pub fn send (&self, stream: &mut impl Write) -> IoResult<()>{
         let body = match &self.body {
             Some(b) => b,
